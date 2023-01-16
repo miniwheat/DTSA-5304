@@ -1,0 +1,51 @@
+---
+title: "College Admissions - Data Processing"
+author: "JF Schultz"
+date: "2023-01-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
+```
+
+```{r libraries, results = 'hide'}
+library(tidyverse)
+```
+
+```{r dataset-init}
+df_hd = read_csv('data/hd2021.csv', show_col_types = FALSE)
+
+df <- df_hd %>%
+  filter(ICLEVEL == 1 & UGOFFER == 1) %>%
+  select(UNITID, INSTNM, FIPS, OBEREG) %>%
+  rename(ID = UNITID, Name = INSTNM, State = FIPS, Region = OBEREG) %>%
+  mutate(across(c(State, Region), factor))
+# 2,556 rows
+```
+
+```{r factor-levels-recode}
+levels(df$Region) <- c('US Service Schools', 'New England','Mid East',
+    'Great Lakes', 'Plains', 'Southeast', 'Southwest', 'Rocky Mountains',
+    'Far West', 'Other US Jurisdctn')
+
+levels(df$State) <-c('Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming', 'American Samoa', 'Federated States of Micronesia', 'Guam', 'Marshall Islands', 'Northern Marianas', 'Palau', 'Puerto Rico', 'Virgin Islands')
+```
+
+```{r dataset-add-admissions}
+df_adm = read_csv('data/adm2021.csv', show_col_types = FALSE)
+
+df <- df_adm %>%
+  drop_na(APPLCN, ADMSSN) %>%
+  filter(ENRLFT > 99) %>%
+  select(UNITID, APPLCN, ADMSSN, ENRLFT, SATVR75, SATMT75, ACTEN75, ACTMT75) %>%
+  rename(ID = UNITID, Applications = APPLCN, Admissions = ADMSSN, Enrollment = ENRLFT) %>%
+  mutate('Admission Rate' = Admissions / Applications, .after = Admissions) %>%
+  inner_join(df, by = 'ID') %>%
+  select(ID, Name, State, Region, everything())
+# 1,386 rows
+```
+
+```{r save-dataframe}
+write_csv(df, 'data/df.csv', append = FALSE)
+```
